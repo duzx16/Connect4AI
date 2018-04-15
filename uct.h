@@ -95,6 +95,8 @@ private:
     int _winner;
     int _player;
     int _noX, _noY, _M, _N;
+    int _total_num;
+    double _share_log;
     int *_init_top, *_state_top;
 
     Node *init_node();

@@ -113,7 +113,7 @@ Node *UCT::bestChild(Node *v)
     for (int i = 0; i < v->children.size(); ++i)
     {
         auto &it = v->children[i];
-        double ucb = it->Q / it->N + 0.7 * sqrt(log(v->N) / it->N);
+        double ucb = it->Q / it->N + 0.7 * _share_log / sqrt(it->N);
         if (not max_node || ucb > max_ucb)
         {
             max_ucb = ucb;
@@ -183,6 +183,8 @@ void UCT::backUp(Node *v, double reward)
         reward = -reward;
         v = v->parent;
     }
+    _total_num += 1;
+    _share_log = sqrt(log(_total_num));
 }
 
 void UCT::clear()
@@ -251,14 +253,14 @@ void UCT::print_state()
 
 UCT::UCT()
 {
-    _init_board = new int *[12];
-    _state_board = new int *[12];
-    _init_top = new int[12];
-    _state_top = new int[12];
-    for (int i = 0; i < 12; ++i)
+    _init_board = new int *[MAX_M];
+    _state_board = new int *[MAX_M];
+    _init_top = new int[MAX_N];
+    _state_top = new int[MAX_N];
+    for (int i = 0; i < MAX_M; ++i)
     {
-        _init_board[i] = new int[12];
-        _state_board[i] = new int[12];
+        _init_board[i] = new int[MAX_N];
+        _state_board[i] = new int[MAX_N];
     }
 }
 
@@ -270,6 +272,8 @@ void UCT::init(int M, int N, int **board, const int *top, int noX, int noY, int 
     _noY = noY;
     _winner = -1;
     _player = player;
+    _total_num = 0;
+    _share_log = 0.0;
     for (int i = 0; i < N; ++i)
     {
         _state_top[i] = _init_top[i] = top[i];
@@ -283,7 +287,7 @@ void UCT::init(int M, int N, int **board, const int *top, int noX, int noY, int 
     }
 }
 
-int Node::next_player()
+inline int Node::next_player()
 {
     return compute_next_player(player);
 }
