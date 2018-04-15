@@ -1,0 +1,327 @@
+#include "uct.h"
+#include "Judge.h"
+#include <cmath>
+#include <cstdlib>
+#include <iostream>
+#include <fstream>
+#include <ctime>
+#include <sys/time.h>
+
+using std::cout;
+
+#if FILE_OUTPUT && !NO_OUTPUT
+extern std::ofstream output("log.txt");
+#else
+extern std:: ostream & output = cout;
+#endif
+
+const int max_search_num = 5000000;
+const int max_size = 1000000;
+const double time_limit = 2.5;
+
+inline int compute_next_player(int player)
+{
+    if (player == 1)
+        return 2;
+    else
+        return 1;
+}
+
+inline double time_diff(const timeval &t1, const timeval &t2)
+{
+    return t1.tv_sec - t2.tv_sec + static_cast<double>(t1.tv_usec - t2.tv_usec) / 1000000;
+}
+
+//进行UCT搜索的函数
+Point UCT::uctSearch()
+{
+    timeval begin_time, current_time;
+    struct timezone zone;
+    gettimeofday(&begin_time, &zone);
+    srand(time(NULL));
+    Node *v0 = init_node();
+    int search_num = 0;
+#if DEBUG
+    output << "search begin \n";
+#endif
+    while (search_num < max_search_num)
+    {
+        if(search_num % 10000 == 0)
+        {
+            gettimeofday(&current_time, &zone);
+            if (time_diff(current_time, begin_time) > time_limit)
+                break;
+#if TIME_TEST && !NO_OUTPUT
+            output << search_num << " " << time_diff(current_time, begin_time) << "\n";
+#endif
+        }
+        Node *vl = treePolicy(v0);
+        double reward = defaultPolicy(vl->player);
+        backUp(vl, reward);
+        clear();
+        search_num += 1;
+    }
+#if TIME_TEST && !NO_OUTPUT
+    output << "\n";
+#endif
+#if !NO_OUTPUT
+    output << search_num << "\n";
+#endif
+    factory.clear();
+    Point action = bestAction(v0);
+    return action;
+}
+
+//对树进行扩展的函数
+Node *UCT::treePolicy(Node *v)
+{
+    do
+    {
+        if (!v->child_actions.empty() && factory.empty())
+        {
+            return expand(v);
+        } else
+        {
+            if (!v->children.empty())
+            {
+                v = bestChild(v);
+                take_action(v->action, v->player);
+                judge_winner(v->action, v->player);
+            } else
+                break;
+        }
+    } while (_winner == -1);
+    return v;
+}
+
+Node *UCT::expand(Node *v)
+{
+    Point action = v->child_actions.back();
+    v->child_actions.pop_back();
+    Node *child = factory.newNode();
+    child->action = action;
+    child->parent = v;
+    child->player = v->next_player();
+    v->children.push_back(child);
+    take_action(action, child->player);
+    judge_winner(action, child->player);
+    if (_winner == -1)
+    {
+        for (int i = 0; i < _N; ++i)
+        {
+            if (_state_top[i] > 0)
+                child->child_actions.emplace_back(_state_top[i] - 1, i);
+        }
+    }
+    return child;
+}
+
+Node *UCT::bestChild(Node *v)
+{
+    double max_ucb = -1e16;
+    Node *max_node = nullptr;
+    for (auto &it:v->children)
+    {
+        double ucb = it->Q / it->N + 0.7 * sqrt(log(v->N) / it->N);
+        if (not max_node || ucb > max_ucb)
+        {
+            max_ucb = ucb;
+            max_node = it;
+        }
+    }
+    return max_node;
+}
+
+double UCT::defaultPolicy(int player)
+{
+    int current_player = compute_next_player(player);
+    while (_winner == -1)
+    {
+#if MUST_WIN
+        bool must_win = false;
+        for (int i = 0; i < _N; ++i)
+        {
+            if (_state_top[i] > 0)
+            {
+                Point action(_state_top[i] - 1, i);
+                _state_board[action.x][action.y] = current_player;
+                if ((current_player == 1 and userWin(action.x, action.y, _M, _N, _state_board)) or
+                    (current_player == 2 and machineWin(action.x, action.y, _M, _N, _state_board)))
+                {
+                    _winner = current_player;
+                }
+                if (_winner == current_player)
+                {
+                    take_action(action, current_player);
+                    must_win = true;
+                    break;
+                } else
+                {
+                    _state_board[action.x][action.y] = 0;
+                }
+            }
+        }
+        if (not must_win)
+#endif
+        {
+            int choice = rand() % _N;
+            while (_state_top[choice] <= 0)
+            {
+                choice = (choice + 1) % _N;
+            }
+            Point action = Point(_state_top[choice] - 1, choice);
+            take_action(action, current_player);
+            judge_winner(action, current_player);
+            current_player = compute_next_player(current_player);
+        }
+    }
+    if (_winner == player)
+        return 1;
+    else if (_winner == 0)
+        return 0;
+    else
+        return -1;
+}
+
+void UCT::backUp(Node *v, double reward)
+{
+    while (v != nullptr)
+    {
+        v->N += 1;
+        v->Q += reward;
+        reward = -reward;
+        v = v->parent;
+    }
+}
+
+void UCT::clear()
+{
+    for (int i = 0; i < _M; ++i)
+        for (int j = 0; j < _N; ++j)
+            _state_board[i][j] = _init_board[i][j];
+    for (int i = 0; i < _N; ++i)
+        _state_top[i] = _init_top[i];
+    _winner = -1;
+}
+
+Node *UCT::init_node()
+{
+    Node *node = factory.newNode();
+    node->player = compute_next_player(_player);
+    for (int i = 0; i < _N; ++i)
+    {
+        if (_state_top[i] > 0)
+            node->child_actions.emplace_back(_state_top[i] - 1, i);
+    }
+    return node;
+}
+
+void UCT::take_action(const Point &action, int player)
+{
+    _state_board[action.x][action.y] = player;
+    _state_top[action.y] -= 1;
+    if (_state_top[action.y] - 1 == _noX && action.y == _noY)
+        _state_top[action.y] -= 1;
+}
+
+void UCT::judge_winner(const Point &action, int player)
+{
+    if (player == 1 and userWin(action.x, action.y, _M, _N, _state_board))
+    {
+        _winner = 1;
+        return;
+    } else if (player == 2 and machineWin(action.x, action.y, _M, _N, _state_board))
+    {
+        _winner = 2;
+        return;
+    } else if (isTie(_N, _state_top))
+        _winner = 0;
+}
+
+Point UCT::bestAction(Node *v)
+{
+    Node *child = bestChild(v);
+    if (child)
+        return bestChild(v)->action;
+    else
+        return {-1, -1};
+}
+
+void UCT::print_state()
+{
+    for (int i = 0; i < _M; ++i)
+    {
+        for (int j = 0; j < _N; ++j)
+            cout << _state_board[i][j] << " ";
+        cout << "\n";
+    }
+    cout << "\n";
+}
+
+UCT::UCT()
+{
+    _init_board = new int *[12];
+    _state_board = new int *[12];
+    _init_top = new int[12];
+    _state_top = new int[12];
+    for (int i = 0; i < 12; ++i)
+    {
+        _init_board[i] = new int[12];
+        _state_board[i] = new int[12];
+    }
+}
+
+void UCT::init(int M, int N, int **board, const int *top, int noX, int noY, int player)
+{
+    _M = M;
+    _N = N;
+    _noX = noX;
+    _noY = noY;
+    _winner = -1;
+    _player = player;
+    for (int i = 0; i < N; ++i)
+    {
+        _state_top[i] = _init_top[i] = top[i];
+    }
+    for (int i = 0; i < M; ++i)
+    {
+        for (int j = 0; j < N; ++j)
+        {
+            _init_board[i][j] = _state_board[i][j] = board[i][j];
+        }
+    }
+}
+
+int Node::next_player()
+{
+    return compute_next_player(player);
+}
+
+Node *Factory::newNode()
+{
+    if (top == total_size)
+    {
+        cout << "Doom!!!!\n";
+    }
+    Node *v = space + top;
+    top += 1;
+    v->N = 0;
+    v->Q = 0;
+    v->parent = nullptr;
+    v->player = 1;
+    v->children.clear();
+    v->child_actions.clear();
+    return v;
+}
+
+
+Factory::Factory() : space(new Node[max_size + 10]), total_size(max_size + 10), top(0)
+{
+    output << "Factory built\n";
+}
+
+Factory::~Factory()
+{
+    delete[]space;
+    output << "Factory destroyed\n";
+}
