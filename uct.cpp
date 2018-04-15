@@ -128,31 +128,25 @@ double UCT::defaultPolicy(int player)
     int current_player = compute_next_player(player);
     while (_winner == -1)
     {
+        Point action{-1, -1};
 #if MUST_WIN
-        bool must_win = false;
+        int next_player = compute_next_player(current_player);
         for (int i = 0; i < _N; ++i)
         {
             if (_state_top[i] > 0)
             {
-                Point action(_state_top[i] - 1, i);
-                _state_board[action.x][action.y] = current_player;
-                if ((current_player == 1 and userWin(action.x, action.y, _M, _N, _state_board)) or
-                    (current_player == 2 and machineWin(action.x, action.y, _M, _N, _state_board)))
+                Point aim_action(_state_top[i] - 1, i);
+                if (judgeWin(action.x, action.y, _M, _N, _state_board, current_player))
                 {
-                    _winner = current_player;
-                }
-                if (_winner == current_player)
-                {
-                    take_action(action, current_player);
-                    must_win = true;
+                    action = aim_action;
                     break;
-                } else
+                } else if (action.x < 0 and judgeWin(action.x, action.y, _M, _N, _state_board, next_player))
                 {
-                    _state_board[action.x][action.y] = 0;
+                    action = aim_action;
                 }
             }
         }
-        if (not must_win)
+        if (action.x < 0)
 #endif
         {
             int choice = rand() % _N;
@@ -160,11 +154,12 @@ double UCT::defaultPolicy(int player)
             {
                 choice = (choice + 1) % _N;
             }
-            Point action = Point(_state_top[choice] - 1, choice);
-            take_action(action, current_player);
-            judge_winner(action, current_player);
-            current_player = compute_next_player(current_player);
+            action = Point(_state_top[choice] - 1, choice);
         }
+        take_action(action, current_player);
+        judge_winner(action, current_player);
+        current_player = compute_next_player(current_player);
+
     }
     if (_winner == player)
         return 1;
