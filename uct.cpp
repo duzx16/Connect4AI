@@ -10,13 +10,13 @@
 using std::cout;
 
 #if FILE_OUTPUT && !NO_OUTPUT
-extern std::ofstream output("log.txt");
+std::ostream &output = std::ofstream("log.txt");
 #else
-extern std:: ostream & output = cout;
+std::ostream &output = cout;
 #endif
 
 const int max_search_num = 5000000;
-const int max_size = 1000000;
+const int max_size = 2000000;
 const double time_limit = 2.5;
 
 inline int compute_next_player(int player)
@@ -41,29 +41,22 @@ Point UCT::uctSearch()
     srand(time(NULL));
     Node *v0 = init_node();
     int search_num = 0;
-#if DEBUG
-    output << "search begin \n";
-#endif
     while (search_num < max_search_num)
     {
-        if(search_num % 10000 == 0)
+#if TIME_LIMIT
+        if (search_num % 10000 == 0)
         {
             gettimeofday(&current_time, &zone);
             if (time_diff(current_time, begin_time) > time_limit)
                 break;
-#if TIME_TEST && !NO_OUTPUT
-            output << search_num << " " << time_diff(current_time, begin_time) << "\n";
-#endif
         }
+#endif
         Node *vl = treePolicy(v0);
         double reward = defaultPolicy(vl->player);
         backUp(vl, reward);
         clear();
         search_num += 1;
     }
-#if TIME_TEST && !NO_OUTPUT
-    output << "\n";
-#endif
 #if !NO_OUTPUT
     output << search_num << "\n";
 #endif
@@ -96,12 +89,9 @@ Node *UCT::treePolicy(Node *v)
 
 Node *UCT::expand(Node *v)
 {
-    Point action = v->child_actions.back();
-    v->child_actions.pop_back();
-    Node *child = factory.newNode();
-    child->action = action;
-    child->parent = v;
-    child->player = v->next_player();
+    int choice = v->child_actions.pop_back();
+    Point action(_state_top[choice] - 1, choice);
+    Node *child = factory.newNode(v, v->next_player(), action);
     v->children.push_back(child);
     take_action(action, child->player);
     judge_winner(action, child->player);
@@ -110,7 +100,7 @@ Node *UCT::expand(Node *v)
         for (int i = 0; i < _N; ++i)
         {
             if (_state_top[i] > 0)
-                child->child_actions.emplace_back(_state_top[i] - 1, i);
+                child->child_actions.push_back(i);
         }
     }
     return child;
@@ -120,8 +110,9 @@ Node *UCT::bestChild(Node *v)
 {
     double max_ucb = -1e16;
     Node *max_node = nullptr;
-    for (auto &it:v->children)
+    for (int i = 0; i < v->children.size(); ++i)
     {
+        auto &it = v->children[i];
         double ucb = it->Q / it->N + 0.7 * sqrt(log(v->N) / it->N);
         if (not max_node || ucb > max_ucb)
         {
@@ -211,7 +202,7 @@ Node *UCT::init_node()
     for (int i = 0; i < _N; ++i)
     {
         if (_state_top[i] > 0)
-            node->child_actions.emplace_back(_state_top[i] - 1, i);
+            node->child_actions.push_back(i);
     }
     return node;
 }
@@ -297,7 +288,7 @@ int Node::next_player()
     return compute_next_player(player);
 }
 
-Node *Factory::newNode()
+inline Node *Factory::newNode(Node *parent, int player, Point action)
 {
     if (top == total_size)
     {
@@ -307,8 +298,9 @@ Node *Factory::newNode()
     top += 1;
     v->N = 0;
     v->Q = 0;
-    v->parent = nullptr;
-    v->player = 1;
+    v->action = action;
+    v->parent = parent;
+    v->player = player;
     v->children.clear();
     v->child_actions.clear();
     return v;
@@ -317,11 +309,15 @@ Node *Factory::newNode()
 
 Factory::Factory() : space(new Node[max_size + 10]), total_size(max_size + 10), top(0)
 {
+#if !NO_OUTPUT
     output << "Factory built\n";
+#endif
 }
 
 Factory::~Factory()
 {
     delete[]space;
+#if !NO_OUTPUT
     output << "Factory destroyed\n";
+#endif
 }
