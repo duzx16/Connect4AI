@@ -116,9 +116,6 @@ private:
     void clear();
 
     void take_action(const Point &action, int player);
-
-    void judge_winner(const Point &action, int player);
-
 };
 
 #endif //AI_PROJECT_UCT_H

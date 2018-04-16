@@ -79,7 +79,6 @@ Node *UCT::treePolicy(Node *v)
             {
                 v = bestChild(v);
                 take_action(v->action, v->player);
-                judge_winner(v->action, v->player);
             } else
                 break;
         }
@@ -94,7 +93,6 @@ Node *UCT::expand(Node *v)
     Node *child = factory.newNode(v, v->next_player(), action);
     v->children.push_back(child);
     take_action(action, child->player);
-    judge_winner(action, child->player);
     if (_winner == -1)
     {
         for (int i = 0; i < _N; ++i)
@@ -157,7 +155,6 @@ double UCT::defaultPolicy(int player)
             action = Point(_state_top[choice] - 1, choice);
         }
         take_action(action, current_player);
-        judge_winner(action, current_player);
         current_player = compute_next_player(current_player);
 
     }
@@ -210,20 +207,14 @@ void UCT::take_action(const Point &action, int player)
     _state_top[action.y] -= 1;
     if (_state_top[action.y] - 1 == _noX && action.y == _noY)
         _state_top[action.y] -= 1;
-}
-
-void UCT::judge_winner(const Point &action, int player)
-{
-    if (player == 1 and userWin(action.x, action.y, _M, _N, _state_board))
+    if (judgeWin(action.x, action.y, _M, _N, _state_board, player))
     {
-        _winner = 1;
-        return;
-    } else if (player == 2 and machineWin(action.x, action.y, _M, _N, _state_board))
+        _winner = player;
+    }
+    else if(isTie(_N, _state_top))
     {
-        _winner = 2;
-        return;
-    } else if (isTie(_N, _state_top))
         _winner = 0;
+    }
 }
 
 Point UCT::bestAction(Node *v)
