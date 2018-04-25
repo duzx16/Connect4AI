@@ -123,40 +123,46 @@ Node *UCT::bestChild(Node *v)
 
 double UCT::defaultPolicy(int player)
 {
-    int current_player = compute_next_player(player), feasible_actions[MAX_N], feasible_num;
+    int current_player = compute_next_player(player), feasible_actions[MAX_N], feasible_num = 0, choice, chosen_y;
+    for (int i = 0; i < _N; ++i)
+    {
+        if (_state_top[i] > 0)
+        {
+            feasible_actions[feasible_num++] = i;
+        }
+    }
     while (_winner == -1)
     {
         Point action{-1, -1};
-        feasible_num = 0;
 #if MUST_WIN
         int next_player = compute_next_player(current_player);
-        for (int i = 0; i < _N; ++i)
+        for (choice = 0; choice < feasible_num; ++choice)
         {
-            if (_state_top[i] > 0)
+            chosen_y = feasible_actions[choice];
+            Point aim_action(_state_top[chosen_y] - 1, chosen_y);
+            if (judgeWin(action.x, action.y, _M, _N, _state_board, current_player))
             {
-                feasible_actions[feasible_num++] = i;
-                Point aim_action(_state_top[i] - 1, i);
-                if (judgeWin(action.x, action.y, _M, _N, _state_board, current_player))
-                {
-                    action = aim_action;
-                    break;
-                } else if (action.x < 0 and judgeWin(action.x, action.y, _M, _N, _state_board, next_player))
-                {
-                    action = aim_action;
-                }
+                action = aim_action;
+                break;
+            } else if (action.x < 0 and judgeWin(action.x, action.y, _M, _N, _state_board, next_player))
+            {
+                action = aim_action;
             }
         }
         if (action.x < 0)
 #endif
         {
-            int choice = feasible_actions[rand() % feasible_num];
-            /*while (_state_top[choice] <= 0)
-            {
-                choice = (choice + 1) % _N;
-            }*/
-            action = Point(_state_top[choice] - 1, choice);
+            choice = rand() % feasible_num;
+            chosen_y = feasible_actions[choice];
+            action = Point(_state_top[chosen_y] - 1, chosen_y);
         }
         take_action(action, current_player);
+        if (_state_top[chosen_y] == 0)
+        {
+            feasible_num--;
+            for (int i = choice; i < feasible_num; ++i)
+                feasible_actions[i] = feasible_actions[i + 1];
+        }
         current_player = compute_next_player(current_player);
 
     }
@@ -188,6 +194,9 @@ void UCT::clear()
             _state_board[i][j] = _init_board[i][j];
     for (int i = 0; i < _N; ++i)
         _state_top[i] = _init_top[i];
+    //_feasible_actions.clear();
+    //for (int i = 0; i < _init_feasible_actions.size(); ++i)
+    //   _feasible_actions.push_back(_init_feasible_actions[i]);
     _winner = -1;
 }
 
@@ -207,7 +216,7 @@ void UCT::take_action(const Point &action, int player)
 {
     _state_board[action.x][action.y] = player;
     _state_top[action.y] -= 1;
-    if (_state_top[action.y] - 1 == _noX && action.y == _noY)
+    if (action.y == _noY && _state_top[action.y] - 1 == _noX)
         _state_top[action.y] -= 1;
     if (judgeWin(action.x, action.y, _M, _N, _state_board, player))
     {
