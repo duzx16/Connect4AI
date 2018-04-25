@@ -123,16 +123,18 @@ Node *UCT::bestChild(Node *v)
 
 double UCT::defaultPolicy(int player)
 {
-    int current_player = compute_next_player(player);
+    int current_player = compute_next_player(player), feasible_actions[MAX_N], feasible_num;
     while (_winner == -1)
     {
         Point action{-1, -1};
+        feasible_num = 0;
 #if MUST_WIN
         int next_player = compute_next_player(current_player);
         for (int i = 0; i < _N; ++i)
         {
             if (_state_top[i] > 0)
             {
+                feasible_actions[feasible_num++] = i;
                 Point aim_action(_state_top[i] - 1, i);
                 if (judgeWin(action.x, action.y, _M, _N, _state_board, current_player))
                 {
@@ -147,11 +149,11 @@ double UCT::defaultPolicy(int player)
         if (action.x < 0)
 #endif
         {
-            int choice = rand() % _N;
-            while (_state_top[choice] <= 0)
+            int choice = feasible_actions[rand() % feasible_num];
+            /*while (_state_top[choice] <= 0)
             {
                 choice = (choice + 1) % _N;
-            }
+            }*/
             action = Point(_state_top[choice] - 1, choice);
         }
         take_action(action, current_player);
@@ -210,8 +212,7 @@ void UCT::take_action(const Point &action, int player)
     if (judgeWin(action.x, action.y, _M, _N, _state_board, player))
     {
         _winner = player;
-    }
-    else if(isTie(_N, _state_top))
+    } else if (isTie(_N, _state_top))
     {
         _winner = 0;
     }
