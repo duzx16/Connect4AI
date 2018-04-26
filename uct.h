@@ -2,6 +2,7 @@
 #define AI_PROJECT_UCT_H
 
 #include "Point.h"
+#include "Judge.h"
 #include <vector>
 
 //用于调整策略的宏
@@ -43,6 +44,22 @@ public:
     {
         T t = _data[--_size];
         return t;
+    }
+
+    void remove(T data)
+    {
+        int i = 0;
+        for (i = 0; i < _size; ++i)
+        {
+            if (_data[i] == data)
+                break;
+        }
+        --_size;
+        for (; i < _size; ++i)
+        {
+            _data[i] = _data[i + 1];
+        }
+
     }
 };
 
@@ -111,11 +128,73 @@ private:
 
     double defaultPolicy(int player);
 
+    double biasPolicy(int player);
+
     void backUp(Node *v, double reward);
 
     void clear();
 
     void take_action(const Point &action, int player);
+
+    int actionScore(const int x, const int y, int player);
+
+    int actionScore(const int x, const int y);
 };
+
+inline int UCT::actionScore(const int x, const int y, int player)
+{
+    int score = 0, small_i, small_j, large_i, large_j, current_count = 1, count = 0, next_player = compute_next_player(
+            player);
+    bool limited = false;
+    for (small_j = y - 1; small_j > y - 4 && small_j > 0; --small_j)
+    {
+        if (_state_board[x][small_j] == player)
+            current_count += 1;
+        else if (_state_board[x][small_j] == player or (x == _noX and small_j == _noY))
+            break;
+
+    }
+    for (large_j = y + 1; large_j < _N && large_j < small_j + 4; large_j++)
+    {
+        if (_state_board[x][large_j] == player)
+            current_count += 1;
+        else if (_state_board[x][large_j] == player or (x == _noX and large_j == _noY))
+        {
+            limited = true;
+            break;
+        }
+    }
+    if (!limited)
+    {
+        do
+        {
+            count = myMax(count, current_count);
+            if (_state_board[x][++small_j] == player)
+                current_count--;
+            if (_state_board[x][++large_j] == player)
+                current_count++;
+            else if (_state_board[x][large_j] == next_player or (x == _noX and large_j == _noY))
+                break;
+        } while (large_j <= 1);
+    }
+    return score;
+}
+
+inline int UCT::actionScore(const int x, const int y)
+{
+    int count[2][4] = {0};
+    bool find[2] = {false, false};
+    for (int i = y - 1; i > y - 4 && i > 0; --i)
+    {
+        if (_state_board[x][i] == 1 && !find[2])
+        {
+            for (int j = 0; j < 4 - y + i; ++j)
+            {
+                count[1][j + 1] += 1;
+                count[2][j + 1] = 0;
+            }
+        }
+    }
+}
 
 #endif //AI_PROJECT_UCT_H

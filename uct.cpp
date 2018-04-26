@@ -174,6 +174,61 @@ double UCT::defaultPolicy(int player)
         return -1;
 }
 
+double UCT::biasPolicy(int player)
+{
+    int current_player = compute_next_player(
+            player), feasible_actions[MAX_N], feasible_num = 0, choice, chosen_y, action_scores[MAX_N], total_score;
+    for (int i = 0; i < _N; ++i)
+    {
+        if (_state_top[i] > 0)
+        {
+            feasible_actions[feasible_num++] = i;
+        }
+    }
+    while (_winner == -1)
+    {
+        total_score = 0;
+        for (choice = 0; choice < feasible_num; ++choice)
+        {
+            chosen_y = feasible_actions[choice];
+            action_scores[choice] = valueJudge(_state_top[chosen_y] - 1, chosen_y, _M, _N, _state_board,
+                                               current_player);
+            action_scores[choice] += valueJudge(_state_top[chosen_y] - 1, chosen_y, _M, _N, _state_board,
+                                                compute_next_player(current_player));
+            total_score += action_scores[choice];
+        }
+        Point action{-1, -1};
+        {
+            int randnum = rand() % total_score;
+            int limit = 0;
+            for (choice = 0; choice < feasible_num; ++choice)
+            {
+                limit += action_scores[choice];
+                if (randnum < limit)
+                    break;
+
+            }
+            chosen_y = feasible_actions[choice];
+            action = Point(_state_top[chosen_y] - 1, chosen_y);
+        }
+        take_action(action, current_player);
+        if (_state_top[chosen_y] == 0)
+        {
+            feasible_num--;
+            for (int i = choice; i < feasible_num; ++i)
+                feasible_actions[i] = feasible_actions[i + 1];
+        }
+        current_player = compute_next_player(current_player);
+
+    }
+    if (_winner == player)
+        return 1;
+    else if (_winner == 0)
+        return 0;
+    else
+        return -1;
+}
+
 void UCT::backUp(Node *v, double reward)
 {
     while (v != nullptr)
@@ -194,9 +249,6 @@ void UCT::clear()
             _state_board[i][j] = _init_board[i][j];
     for (int i = 0; i < _N; ++i)
         _state_top[i] = _init_top[i];
-    //_feasible_actions.clear();
-    //for (int i = 0; i < _init_feasible_actions.size(); ++i)
-    //   _feasible_actions.push_back(_init_feasible_actions[i]);
     _winner = -1;
 }
 
