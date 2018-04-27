@@ -1,18 +1,19 @@
 #ifndef AI_PROJECT_UCT_H
 #define AI_PROJECT_UCT_H
 
-#include "Point.h"
-#include "Judge.h"
-#include <vector>
-
 //用于调整策略的宏
 #define TIME_LIMIT 1
 #define MUST_WIN 1
+#define VALUE_JUDGE 0
 
 //用于改变输出的宏
 #define FILE_OUTPUT 0
 #define NO_OUTPUT 0
 #define STEP_RECORD 0
+
+#include "Point.h"
+#include "Judge.h"
+#include <vector>
 
 #define MAX_M 12
 #define MAX_N 12
@@ -128,19 +129,23 @@ private:
 
     double defaultPolicy(int player);
 
-    double biasPolicy(int player);
-
     void backUp(Node *v, double reward);
 
     void clear();
 
     void take_action(const Point &action, int player);
 
+#if VALUE_JUDGE
+
+    double biasPolicy(int player);
+
     int actionScore(const int x, const int y, int player);
 
     int actionScore(const int x, const int y);
+#endif
 };
 
+#if VALUE_JUDGE
 inline int UCT::actionScore(const int x, const int y, int player)
 {
     int score = 0, small_i, small_j, large_i, large_j, current_count = 1, count = 0, next_player = compute_next_player(
@@ -196,5 +201,6 @@ inline int UCT::actionScore(const int x, const int y)
         }
     }
 }
+#endif
 
 #endif //AI_PROJECT_UCT_H

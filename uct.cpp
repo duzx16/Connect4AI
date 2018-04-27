@@ -52,7 +52,11 @@ Point UCT::uctSearch()
         }
 #endif
         Node *vl = treePolicy(v0);
+#if VALUE_JUDGE
+        double reward = biasPolicy(vl->player);
+#else
         double reward = defaultPolicy(vl->player);
+#endif
         backUp(vl, reward);
         clear();
         search_num += 1;
@@ -174,6 +178,7 @@ double UCT::defaultPolicy(int player)
         return -1;
 }
 
+#if VALUE_JUDGE
 double UCT::biasPolicy(int player)
 {
     int current_player = compute_next_player(
@@ -228,6 +233,7 @@ double UCT::biasPolicy(int player)
     else
         return -1;
 }
+#endif
 
 void UCT::backUp(Node *v, double reward)
 {
