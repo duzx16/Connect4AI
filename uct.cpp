@@ -74,7 +74,11 @@ Node *UCT::treePolicy(Node *v)
 {
     do
     {
-        if (!v->child_actions.empty() && factory.empty())
+#ifdef EXPAND_STEP
+        if (v->N > EXPAND_STEP && !v->child_actions.empty() && factory.empty())
+#else
+            if (!v->child_actions.empty() && factory.empty())
+#endif
         {
             return expand(v);
         } else
@@ -179,6 +183,7 @@ double UCT::defaultPolicy(int player)
 }
 
 #if VALUE_JUDGE
+
 double UCT::biasPolicy(int player)
 {
     int current_player = compute_next_player(
@@ -233,6 +238,7 @@ double UCT::biasPolicy(int player)
     else
         return -1;
 }
+
 #endif
 
 void UCT::backUp(Node *v, double reward)

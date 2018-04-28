@@ -4,7 +4,8 @@
 //用于调整策略的宏
 #define TIME_LIMIT 1
 #define MUST_WIN 1
-#define VALUE_JUDGE 0
+#define VALUE_JUDGE 1
+#define EXPAND_STEP 20
 
 //用于改变输出的宏
 #define FILE_OUTPUT 0
