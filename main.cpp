@@ -6,6 +6,8 @@
 using std::cout;
 #define INPUT_BOARD 0
 
+extern UCT uct_tree;
+
 int main()
 {
     srand(time(NULL));
@@ -55,7 +57,6 @@ int main()
                 }
             }
         }
-        UCT uct_tree;
         for (int i = 0; i < M * N - 1; ++i)
         {
             int player = 1 + i % 2;
