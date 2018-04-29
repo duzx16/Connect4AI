@@ -119,7 +119,11 @@ Node *UCT::bestChild(Node *v)
     for (int i = 0; i < v->children.size(); ++i)
     {
         auto &it = v->children[i];
+#if APPLY_UCT
         double ucb = it->Q / it->N + 0.7 * _share_log / sqrt(it->N);
+#else
+        double ucb = it->Q / it->N;
+#endif
         if (not max_node || ucb > max_ucb)
         {
             max_ucb = ucb;
@@ -251,7 +255,9 @@ void UCT::backUp(Node *v, double reward)
         v = v->parent;
     }
     _total_num += 1;
+#if APPLY_UCT
     _share_log = sqrt(log(_total_num));
+#endif
 }
 
 void UCT::clear()

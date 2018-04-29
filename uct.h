@@ -5,6 +5,7 @@
 #define TIME_LIMIT 1
 #define MUST_WIN 1
 #define VALUE_JUDGE 1
+#define APPLY_UCT 1
 #define EXPAND_STEP 20
 
 //用于改变输出的宏
