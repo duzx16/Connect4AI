@@ -51,6 +51,11 @@ Point UCT::uctSearch()
                 break;
         }
 #endif
+        if (search_num % 10000 == 0)
+        {
+            int a = 1;
+        }
+
         Node *vl = treePolicy(v0);
 #if VALUE_JUDGE
         double reward = biasPolicy(vl->player);
@@ -77,7 +82,7 @@ Node *UCT::treePolicy(Node *v)
 #ifdef EXPAND_STEP
         if (v->N > EXPAND_STEP && !v->child_actions.empty() && factory.empty())
 #else
-            if (!v->child_actions.empty() && factory.empty())
+        if (!v->child_actions.empty() && factory.empty())
 #endif
         {
             return expand(v);
@@ -103,11 +108,7 @@ Node *UCT::expand(Node *v)
     take_action(action, child->player);
     if (_winner == -1)
     {
-        for (int i = 0; i < _N; ++i)
-        {
-            if (_state_top[i] > 0)
-                child->child_actions.push_back(i);
-        }
+        add_actions(child);
     }
     return child;
 }
@@ -147,18 +148,22 @@ double UCT::defaultPolicy(int player)
     {
         Point action{-1, -1};
 #if MUST_WIN
-        int next_player = compute_next_player(current_player);
-        for (choice = 0; choice < feasible_num; ++choice)
+        int next_player = compute_next_player(current_player), test_y;
+        for (int j = 0; j < feasible_num; ++j)
         {
-            chosen_y = feasible_actions[choice];
-            Point aim_action(_state_top[chosen_y] - 1, chosen_y);
+            test_y = feasible_actions[j];
+            Point aim_action(_state_top[test_y] - 1, test_y);
             if (judgeWin(aim_action.x, aim_action.y, _M, _N, _state_board, current_player))
             {
                 action = aim_action;
+                chosen_y = test_y;
+                choice = j;
                 break;
             } else if (action.x < 0 and judgeWin(aim_action.x, aim_action.y, _M, _N, _state_board, next_player))
             {
                 action = aim_action;
+                chosen_y = test_y;
+                choice = j;
             }
         }
         if (action.x < 0)
@@ -274,13 +279,45 @@ Node *UCT::init_node()
 {
     Node *node = factory.newNode();
     node->player = compute_next_player(_player);
+    add_actions(node);
+    return node;
+}
+
+void UCT::add_actions(Node *v)
+{
+    int next_player = compute_next_player(v->player);
+#if MUST_WIN
+    bool must_lose = false;
+#endif
     for (int i = 0; i < _N; ++i)
     {
         if (_state_top[i] > 0)
-            node->child_actions.push_back(i);
+        {
+#if MUST_WIN
+            if (judgeWin(_state_top[i] - 1, i, _M, _N, _state_board, next_player))
+            {
+                v->child_actions.clear();
+                v->child_actions.push_back(i);
+                break;
+            } else if (judgeWin(_state_top[i] - 1, i, _M, _N, _state_board, v->player))
+            {
+                if (not must_lose)
+                {
+                    v->child_actions.clear();
+                    must_lose = true;
+                }
+                v->child_actions.push_back(i);
+            } else if (not must_lose)
+#endif
+            {
+                v->child_actions.push_back(i);
+            }
+
+        }
     }
-    return node;
+
 }
+
 
 void UCT::take_action(const Point &action, int player)
 {
