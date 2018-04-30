@@ -152,11 +152,11 @@ double UCT::defaultPolicy(int player)
         {
             chosen_y = feasible_actions[choice];
             Point aim_action(_state_top[chosen_y] - 1, chosen_y);
-            if (judgeWin(action.x, action.y, _M, _N, _state_board, current_player))
+            if (judgeWin(aim_action.x, aim_action.y, _M, _N, _state_board, current_player))
             {
                 action = aim_action;
                 break;
-            } else if (action.x < 0 and judgeWin(action.x, action.y, _M, _N, _state_board, next_player))
+            } else if (action.x < 0 and judgeWin(aim_action.x, aim_action.y, _M, _N, _state_board, next_player))
             {
                 action = aim_action;
             }
@@ -311,7 +311,10 @@ void UCT::print_state()
     for (int i = 0; i < _M; ++i)
     {
         for (int j = 0; j < _N; ++j)
-            cout << _state_board[i][j] << " ";
+            if (i == _noX and j == _noY)
+                cout << "x ";
+            else
+                cout << _state_board[i][j] << " ";
         cout << "\n";
     }
     cout << "\n";
