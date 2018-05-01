@@ -4,7 +4,7 @@
 #include "Judge.h"
 
 using std::cout;
-#define INPUT_BOARD 0
+#define INPUT_BOARD 1
 
 extern UCT uct_tree;
 
@@ -15,8 +15,8 @@ int main()
     {
         int M = rand() % 4 + 9, N = rand() % 4 + 9, noX = rand() % M, noY = rand() % N;
 #if INPUT_BOARD
-        M = 4;
-        N = 12;
+        M = 10;
+        N = 9;
 #endif
         int **board = new int *[M];
         int *top = new int[N];
@@ -59,7 +59,7 @@ int main()
         }
         for (int i = 0; i < M * N - 1; ++i)
         {
-            int player = 1 + i % 2;
+            int player = 2 - i % 2;
             uct_tree.init(M, N, board, top, noX, noY, player);
             uct_tree.print_state();
             Point action = uct_tree.uctSearch();

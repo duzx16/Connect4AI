@@ -51,11 +51,6 @@ Point UCT::uctSearch()
                 break;
         }
 #endif
-        if (search_num % 10000 == 0)
-        {
-            int a = 1;
-        }
-
         Node *vl = treePolicy(v0);
 #if VALUE_JUDGE
         double reward = biasPolicy(vl->player);
@@ -68,6 +63,9 @@ Point UCT::uctSearch()
     }
 #if !NO_OUTPUT
     output << search_num << "\n";
+#if STEP_RECORD
+    print_state();
+#endif
 #endif
     factory.clear();
     Point action = bestAction(v0);
