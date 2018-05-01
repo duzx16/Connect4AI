@@ -20,11 +20,7 @@
 #define MAX_M 12
 #define MAX_N 12
 
-double getTime();
-
 int compute_next_player(int player);
-
-// the tree node for UCT
 
 template<typename T, int N>
 class FixedVector {
@@ -66,6 +62,7 @@ public:
     }
 };
 
+// the tree node for UCT
 struct Node {
     Point action;
     double Q;
@@ -73,6 +70,7 @@ struct Node {
     int player;
     Node *parent;
     FixedVector<Node *, MAX_N> children;
+    //表示可能的落子点
     FixedVector<int, MAX_N> child_actions;
 
     Node() : Q(0), N(0), action(0, 0), parent(nullptr), player(1) {}
@@ -146,10 +144,13 @@ private:
     int actionScore(const int x, const int y, int player);
 
     int actionScore(const int x, const int y);
+
 #endif
 };
 
 #if VALUE_JUDGE
+
+//写废了的估值函数1
 inline int UCT::actionScore(const int x, const int y, int player)
 {
     int score = 0, small_i, small_j, large_i, large_j, current_count = 1, count = 0, next_player = compute_next_player(
@@ -189,6 +190,7 @@ inline int UCT::actionScore(const int x, const int y, int player)
     return score;
 }
 
+//写废了的估值函数2
 inline int UCT::actionScore(const int x, const int y)
 {
     int count[2][4] = {0};
@@ -205,6 +207,7 @@ inline int UCT::actionScore(const int x, const int y)
         }
     }
 }
+
 #endif
 
 #endif //AI_PROJECT_UCT_H

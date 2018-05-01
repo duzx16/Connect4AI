@@ -19,6 +19,7 @@ const int max_search_num = 5000000;
 const int max_size = 2000000;
 const double time_limit = 2.5;
 
+//给1返2给2返1
 inline int compute_next_player(int player)
 {
     if (player == 1)
@@ -27,6 +28,7 @@ inline int compute_next_player(int player)
         return 1;
 }
 
+//求两个时间戳之间的时间差（秒）
 inline double time_diff(const timeval &t1, const timeval &t2)
 {
     return t1.tv_sec - t2.tv_sec + static_cast<double>(t1.tv_usec - t2.tv_usec) / 1000000;
@@ -97,6 +99,7 @@ Node *UCT::treePolicy(Node *v)
     return v;
 }
 
+//为某一节点扩展子节点
 Node *UCT::expand(Node *v)
 {
     int choice = v->child_actions.pop_back();
@@ -111,6 +114,7 @@ Node *UCT::expand(Node *v)
     return child;
 }
 
+//按照UCT返回最佳子节点
 Node *UCT::bestChild(Node *v)
 {
     double max_ucb = -1e16;
@@ -248,6 +252,7 @@ double UCT::biasPolicy(int player)
 
 #endif
 
+//将模拟结果回溯
 void UCT::backUp(Node *v, double reward)
 {
     while (v != nullptr)
@@ -263,6 +268,7 @@ void UCT::backUp(Node *v, double reward)
 #endif
 }
 
+//将board和top回到初始状态
 void UCT::clear()
 {
     for (int i = 0; i < _M; ++i)
@@ -273,6 +279,7 @@ void UCT::clear()
     _winner = -1;
 }
 
+//初始化子节点
 Node *UCT::init_node()
 {
     Node *node = factory.newNode();
@@ -281,6 +288,7 @@ Node *UCT::init_node()
     return node;
 }
 
+//为某个节点设置child_actions
 void UCT::add_actions(Node *v)
 {
     int next_player = compute_next_player(v->player);
@@ -316,7 +324,7 @@ void UCT::add_actions(Node *v)
 
 }
 
-
+//采取某个落子并判定胜负
 void UCT::take_action(const Point &action, int player)
 {
     _state_board[action.x][action.y] = player;
@@ -332,6 +340,7 @@ void UCT::take_action(const Point &action, int player)
     }
 }
 
+//返回最佳动作
 Point UCT::bestAction(Node *v)
 {
     Node *child = bestChild(v);
@@ -341,6 +350,7 @@ Point UCT::bestAction(Node *v)
         return {-1, -1};
 }
 
+//打印当前局面
 void UCT::print_state()
 {
     for (int i = 0; i < _M; ++i)
@@ -396,6 +406,7 @@ inline int Node::next_player()
     return compute_next_player(player);
 }
 
+//返回某个节点
 inline Node *Factory::newNode(Node *parent, int player, Point action)
 {
     if (top == total_size)
