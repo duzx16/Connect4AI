@@ -6,12 +6,13 @@
 #define MUST_WIN 1
 #define VALUE_JUDGE 1
 #define APPLY_UCT 1
-//#define EXPAND_STEP 20
+#define EXPAND_STEP 20
 
 //用于改变输出的宏
 #define FILE_OUTPUT 0
 #define NO_OUTPUT 1
 #define STEP_RECORD 0
+#define ACTION_RECORD 0
 
 #include "Point.h"
 #include "Judge.h"
@@ -76,6 +77,8 @@ struct Node {
     Node() : Q(0), N(0), action(0, 0), parent(nullptr), player(1) {}
 
     int next_player();
+
+    double upper_bound(double log_total);
 };
 
 // the factory for space pool

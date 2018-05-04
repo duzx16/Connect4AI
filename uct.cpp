@@ -71,6 +71,13 @@ Point UCT::uctSearch()
 #endif
     factory.clear();
     Point action = bestAction(v0);
+#if ACTION_RECORD
+    for (int i = 0; i < v0->children.size(); ++i)
+    {
+        output << v0->children[i]->upper_bound(_share_log) << " " << v0->children[i]->N << "\n";
+    }
+    output << "\n";
+#endif
     return action;
 }
 
@@ -79,10 +86,10 @@ Node *UCT::treePolicy(Node *v)
 {
     do
     {
-#ifdef EXPAND_STEP
+#if EXPAND_STEP > 0
         if (v->N > EXPAND_STEP && !v->child_actions.empty() && factory.empty())
 #else
-        if (!v->child_actions.empty() && factory.empty())
+            if (!v->child_actions.empty() && factory.empty())
 #endif
         {
             return expand(v);
@@ -134,6 +141,27 @@ Node *UCT::bestChild(Node *v)
         }
     }
     return max_node;
+}
+
+//返回最佳动作
+Point UCT::bestAction(Node *v)
+{
+    //Node *child = bestChild(v);
+    Node *child = nullptr;
+    int max_N = -1;
+    for (int i = 0; i < v->children.size(); ++i)
+    {
+        auto &it = v->children[i];
+        if (it->N > max_N)
+        {
+            max_N = it->N;
+            child = it;
+        }
+    }
+    if (child)
+        return child->action;
+    else
+        return {-1, -1};
 }
 
 double UCT::defaultPolicy(int player)
@@ -340,16 +368,6 @@ void UCT::take_action(const Point &action, int player)
     }
 }
 
-//返回最佳动作
-Point UCT::bestAction(Node *v)
-{
-    Node *child = bestChild(v);
-    if (child)
-        return bestChild(v)->action;
-    else
-        return {-1, -1};
-}
-
 //打印当前局面
 void UCT::print_state()
 {
@@ -404,6 +422,11 @@ void UCT::init(int M, int N, int **board, const int *top, int noX, int noY, int 
 inline int Node::next_player()
 {
     return compute_next_player(player);
+}
+
+double Node::upper_bound(double log_total)
+{
+    return Q / N + 0.7 * log_total / sqrt(N);
 }
 
 //返回某个节点
